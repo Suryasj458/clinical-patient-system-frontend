@@ -1,0 +1,12 @@
+html { scroll-behavior: smooth; }
+body { margin: 0; }
+.MuiTableCell-head { background: #eef2f7; font-weight: 700 !important; white-space: nowrap; }
+.MuiTableCell-root { border: 1px solid #d7dce2; }
+@media print {
+  @page { size: A4; margin: 10mm; }
+  body { background: #fff !important; }
+  .no-print { display: none !important; }
+  .print-card { box-shadow: none !important; break-inside: avoid; border-color: #bbb !important; }
+  .MuiContainer-root { max-width: none !important; padding: 0 !important; }
+  .MuiInputBase-input, .MuiInputBase-inputMultiline { padding: 5px !important; }
+}
