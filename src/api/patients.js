@@ -19,3 +19,13 @@ export async function updatePatient(id, payload) {
 export async function deletePatient(id) {
   await api.delete(`/patients/${id}`);
 }
+
+export function exportPatientsExcel(search = "") {
+  return api.get("/patients/export/excel", {
+    params: {
+      search,
+    },
+    responseType: "blob",
+    timeout: 120000,
+  });
+}

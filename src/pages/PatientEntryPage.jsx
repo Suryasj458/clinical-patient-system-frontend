@@ -33,6 +33,7 @@ import {
   AddRounded,
   DeleteOutlineRounded,
   DescriptionOutlined,
+  DownloadRounded,
   LocalHospitalRounded,
   PersonSearchRounded,
   PrintRounded,
@@ -56,6 +57,7 @@ import {
   deletePatient,
   searchPatients,
   updatePatient,
+  exportPatientsExcel,
 } from "../api/patients";
 
 const PRIMARY = "#2563EB";
@@ -168,6 +170,7 @@ export default function PatientEntryPage() {
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -369,6 +372,69 @@ export default function PatientEntryPage() {
       setDeleting(false);
     }
   };
+
+  const handleExportExcel = async () => {
+  setExporting(true);
+
+  try {
+    const response = await exportPatientsExcel(search.trim());
+
+    const contentDisposition =
+      response.headers["content-disposition"];
+
+    let fileName = `clinical-patient-records-${new Date()
+      .toISOString()
+      .slice(0, 10)}.xlsx`;
+
+    const fileNameMatch = contentDisposition?.match(
+      /filename="?([^"]+)"?/i,
+    );
+
+    if (fileNameMatch?.[1]) {
+      fileName = fileNameMatch[1];
+    }
+
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = downloadUrl;
+    link.download = fileName;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(downloadUrl);
+
+    showNotice("Patient records exported successfully.");
+  } catch (error) {
+    let message = "Unable to export patient records.";
+
+    if (error.response?.data instanceof Blob) {
+      try {
+        const errorText = await error.response.data.text();
+        const errorJson = JSON.parse(errorText);
+
+        message = errorJson.message || message;
+      } catch {
+        message = "Unable to export patient records.";
+      }
+    } else {
+      message =
+        error.response?.data?.message ||
+        error.message ||
+        message;
+    }
+
+    showNotice(message, "error");
+  } finally {
+    setExporting(false);
+  }
+};
 
   return (
     <Box
@@ -613,99 +679,129 @@ export default function PatientEntryPage() {
           </Box>
 
           <Box sx={{ p: { xs: 2, md: 2.5 } }}>
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={1.2}
-            >
-              <TextField
-                fullWidth
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    runSearch();
-                  }
-                }}
-                placeholder="Enter patient name or IP number"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchRounded sx={{ color: "#94A3B8" }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: "#FAFBFD",
+         <Stack
+  direction={{ xs: "column", md: "row" }}
+  spacing={1.2}
+>
+  <TextField
+    fullWidth
+    value={search}
+    onChange={(event) => setSearch(event.target.value)}
+    onKeyDown={(event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runSearch();
+      }
+    }}
+    placeholder="Enter patient name or IP number"
+    InputProps={{
+      startAdornment: (
+        <InputAdornment position="start">
+          <SearchRounded sx={{ color: "#94A3B8" }} />
+        </InputAdornment>
+      ),
+    }}
+    sx={{
+      "& .MuiOutlinedInput-root": {
+        height: 48,
+        borderRadius: 2,
+        bgcolor: "#FAFBFD",
 
-                    "& fieldset": {
-                      borderColor: BORDER,
-                    },
+        "& fieldset": {
+          borderColor: BORDER,
+        },
 
-                    "&:hover fieldset": {
-                      borderColor: "#B7C2D0",
-                    },
+        "&:hover fieldset": {
+          borderColor: "#B7C2D0",
+        },
 
-                    "&.Mui-focused fieldset": {
-                      borderColor: PRIMARY,
-                    },
-                  },
-                }}
-              />
+        "&.Mui-focused fieldset": {
+          borderColor: PRIMARY,
+        },
+      },
+    }}
+  />
 
-              <Button
-                variant="contained"
-                disableElevation
-                disabled={searching}
-                startIcon={
-                  searching ? (
-                    <CircularProgress size={17} color="inherit" />
-                  ) : (
-                    <SearchRounded />
-                  )
-                }
-                onClick={() => runSearch()}
-                sx={{
-                  height: 48,
-                  minWidth: { md: 130 },
-                  borderRadius: 2,
-                  bgcolor: PRIMARY,
-                  textTransform: "none",
-                  fontWeight: 700,
+  <Button
+    variant="contained"
+    disableElevation
+    disabled={searching}
+    startIcon={
+      searching ? (
+        <CircularProgress size={17} color="inherit" />
+      ) : (
+        <SearchRounded />
+      )
+    }
+    onClick={() => runSearch()}
+    sx={{
+      height: 48,
+      minWidth: { md: 130 },
+      borderRadius: 2,
+      bgcolor: PRIMARY,
+      textTransform: "none",
+      fontWeight: 700,
 
-                  "&:hover": {
-                    bgcolor: "#1D4ED8",
-                  },
-                }}
-              >
-                Search
-              </Button>
+      "&:hover": {
+        bgcolor: "#1D4ED8",
+      },
+    }}
+  >
+    Search
+  </Button>
 
-              <Button
-                variant="outlined"
-                startIcon={<RefreshRounded />}
-                onClick={showAllPatients}
-                sx={{
-                  height: 48,
-                  minWidth: { md: 130 },
-                  borderRadius: 2,
-                  borderColor: BORDER,
-                  color: TEXT,
-                  textTransform: "none",
-                  fontWeight: 700,
+  <Button
+    variant="outlined"
+    startIcon={<RefreshRounded />}
+    onClick={showAllPatients}
+    sx={{
+      height: 48,
+      minWidth: { md: 130 },
+      borderRadius: 2,
+      borderColor: BORDER,
+      color: TEXT,
+      textTransform: "none",
+      fontWeight: 700,
 
-                  "&:hover": {
-                    borderColor: "#B7C2D0",
-                    bgcolor: "#F8FAFC",
-                  },
-                }}
-              >
-                Show all
-              </Button>
-            </Stack>
+      "&:hover": {
+        borderColor: "#B7C2D0",
+        bgcolor: "#F8FAFC",
+      },
+    }}
+  >
+    Show all
+  </Button>
+
+  <Button
+    variant="outlined"
+    disabled={exporting}
+    startIcon={
+      exporting ? (
+        <CircularProgress size={17} color="inherit" />
+      ) : (
+        <DownloadRounded />
+      )
+    }
+    onClick={handleExportExcel}
+    sx={{
+      height: 48,
+      minWidth: { md: 160 },
+      borderRadius: 2,
+      borderColor: "#16A34A",
+      color: "#15803D",
+      textTransform: "none",
+      fontWeight: 700,
+      whiteSpace: "nowrap",
+
+      "&:hover": {
+        borderColor: "#15803D",
+        bgcolor: "#F0FDF4",
+      },
+    }}
+  >
+    {exporting ? "Exporting..." : "Export Excel"}
+  </Button>
+</Stack>
 
             {searching && (
               <Box
