@@ -1081,9 +1081,9 @@ export default function PatientEntryPage() {
             className="no-print"
             elevation={0}
             sx={{
-              position: "sticky",
+              // position: "sticky",
               bottom: 12,
-              zIndex: 20,
+              // zIndex: 20,
               mt: 2,
               p: { xs: 1.5, md: 1.8 },
               borderRadius: 3,
